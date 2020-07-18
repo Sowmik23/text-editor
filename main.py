@@ -192,7 +192,6 @@ font_size.bind("<<ComboboxSelected>>", change_fontsize)
 def change_bold():
 	text_property = tk.font.Font(font=text_editor['font'])
 	if text_property.actual()['weight']=='normal':
-		#print('OK')
 		text_editor.configure(font=(current_font_family, current_font_size, 'bold'))
 	if text_property.actual()['weight']=='bold':
 		text_editor.configure(font=(current_font_family, current_font_size, 'normal'))
@@ -283,8 +282,8 @@ def changed(event=None):
 	if text_editor.edit_modified():
 		text_changed = True
 		words = len(text_editor.get(1.0, 'end-1c').split())
-		characters = len(text_editor.get(1.0, 'end-1c'))   
-		#status_bar.config(text=f"Characters: {characters} Words: {words}")
+		characters = len(text_editor.get(1.0, 'end-1c'))   #if you don't want to count use .replace(' ','')
+		status_bar.config(text=f'Characters: {characters} Words: {words}')
 	text_editor.edit_modified(False)
 
 
@@ -296,26 +295,159 @@ text_editor.bind('<<Modified>>', changed)
 # ---------------------------------- end of status bar --------------------------------------- #
 
 
-# 01787962658
+
 
 
 
 #################################### main menu functionality ################################################
 
+url = ''
+
+## new file functinalities
+def new_file(event=None):
+	global url
+	url = ''
+	text_editor.delete(1.0, tk.END)
+
 ## file commands
-file.add_command(label='New', image=new_icon, compound=tk.LEFT, accelerator='Ctrl+N')
-file.add_command(label='Open', image=open_icon, compound=tk.LEFT, accelerator='Ctrl+O')
-file.add_command(label='Save', image=save_icon, compound=tk.LEFT, accelerator='Ctrl+S')
-file.add_command(label='Save As', image=save_as_icon, compound=tk.LEFT, accelerator='Ctrl+Alt+S')
-file.add_command(label='Exit', image=exit_icon, compound=tk.LEFT, accelerator='Ctrl+Q')
+file.add_command(label='New', image=new_icon, compound=tk.LEFT, accelerator='Ctrl+N', command=new_file)
+
+
+
+
+## open file functionalities
+def open_file(event=None):
+	global url 
+	url = filedialog.askopenfilename(initialdir=os.getcwd(), title='Select File', filetypes=(('Text File', '*.txt'), ('All files', '*.*')))
+	try:
+		with  open(url, 'r') as fr:
+			text_editor.delete(1.0, tk.END)
+			text_editor.insert(1.0, fr.read())
+	except FileNotFoundError:
+		return 
+	except:
+		return 
+
+	main_application.title(os.path.basename(url))
+
+file.add_command(label='Open', image=open_icon, compound=tk.LEFT, accelerator='Ctrl+O', command=open_file)
+
+
+
+## save file
+def save_file(event=None):
+	global url
+	try:
+		if url:
+			content = str(text_editor.get(1.0, tk.END))
+			with open(url, 'w', encoding='utf-8') as fw:
+				fw.write(content)
+
+		else:
+			url = filedialog.asksaveasfile(mode='w', defaultextension='.txt', filetypes=(('Text File', '*.txt'), ('All files', '*.*')))
+			content2 = text_editor.get(1.0, tk.END)
+			url.write(content2)
+			url.close()
+
+	except:
+		return
+
+
+file.add_command(label='Save', image=save_icon, compound=tk.LEFT, accelerator='Ctrl+S', command=save_file)
+
+
+## save as
+def save_as(event=None):
+	global url
+	try:
+		content = text_editor.get(1.0, tk.END)
+		url = filedialog.asksaveasfile(mode='w', defaultextension='.txt', filetypes=(('Text File', '*.txt'), ('All files', '*.*')))
+		url.write(content)
+		url.close()
+	except:
+		return 
+
+file.add_command(label='Save As', image=save_as_icon, compound=tk.LEFT, accelerator='Ctrl+Alt+S', command=save_as)
+
+
+
+
+## Quit/Exit
+def exit_func(event=None):
+	global url, text_changed
+	try:
+		if text_changed:
+			mbox = mesagebox.askyesnocancel('Warning', 'Do you want to save the file ?')
+			if mbox is True:
+				if url:
+					content = text_editor.get(1.0, tk.END)
+					with open(url, 'w', encoding='utf-8') as fw:
+						fw.write(content)
+						main_application.destroy()
+				else:
+					content2 = str(text_editor.get(1.0, tk.END))
+					url = filedialog.asksaveasfile(mode='w', defaultextension='.txt', filetypes=(('Text File', '*.txt'), ('All files', '*.*')))
+					url.write(content2)
+					url.close()
+					main_application.destroy()
+
+			elif mbox is False:
+				main_application.destroy()
+		else:
+			main_application.destroy()
+	except:
+		return
+
+file.add_command(label='Exit', image=exit_icon, compound=tk.LEFT, accelerator='Ctrl+Q', command=exit_func)
+
 
 
 ## edit commands
-edit.add_command(label='Copy', image=copy_icon, compound=tk.LEFT, accelerator='Ctrl+C')
-edit.add_command(label='Paste', image=paste_icon, compound=tk.LEFT, accelerator='Ctrl+V')
-edit.add_command(label='Cut', image=cut_icon, compound=tk.LEFT, accelerator='Ctrl+X')
-edit.add_command(label='Clear All', image=clear_all_icon, compound=tk.LEFT, accelerator='Ctrl+Alt+X')
-edit.add_command(label='Find', image=find_icon, compound=tk.LEFT, accelerator='Ctrl+F')
+edit.add_command(label='Copy', image=copy_icon, compound=tk.LEFT, accelerator='Ctrl+C', command=lambda:text_editor.event_generate("<Control c>"))
+edit.add_command(label='Paste', image=paste_icon, compound=tk.LEFT, accelerator='Ctrl+V', command=lambda:text_editor.event_generate("<Control v>"))
+edit.add_command(label='Cut', image=cut_icon, compound=tk.LEFT, accelerator='Ctrl+X', command=lambda:text_editor.event_generate("<Control x>"))
+edit.add_command(label='Clear All', image=clear_all_icon, compound=tk.LEFT, accelerator='Ctrl+Alt+X', command=lambda:text_editor.delete(1.0, tk.END))
+
+
+## find functionalities
+def find_func(event=None):
+	find_dialog = tk.Toplevel()
+	find_dialog.geometry('450x250+500+200')
+	find_dialog.title('Find')
+	find_dialog.resizable(0, 0)
+
+
+	## frame 
+	find_frame = ttk.LabelFrame(find_dialog, text='Find/Replace')
+	find_frame.pack(pady=20)
+
+	## labels
+	text_find_label = ttk.Label(find_frame, text='Find: ')
+	text_replace_label = ttk.Label(find_frame, text='Replace')
+
+	## entry
+	find_input = ttk.Entry(find_frame, width=30)
+	replace_input = ttk.Entry(find_frame, width=30)
+
+	## button 
+	find_button = ttk.Button(find_frame, text='Find')
+	replace_button = ttk.Button(find_frame, text='Replace')
+
+	## label grid
+	text_find_label.grid(row=0, column=0, padx=4, pady=4)
+	text_replace_label.grid(row=1, column=0, padx=4, pady=4)
+
+	## entry grid
+	find_input.grid(row=0, column=1, padx=4, pady=4)
+	replace_input.grid(row=1, column=1, padx=4, pady=4)
+
+	## button grid
+	find_button.grid(row=2, column=0, padx = 8, pady=4)
+	replace_button.grid(row=2, column=1, padx=8, pady=4)
+
+	find_dialog.mainloop()
+
+edit.add_command(label='Find', image=find_icon, compound=tk.LEFT, accelerator='Ctrl+F', command=find_func)
 
 
 ## view check button commands
@@ -337,3 +469,4 @@ for i in color_dict:
 
 main_application.config(menu=main_menu)
 main_application.mainloop()
+
