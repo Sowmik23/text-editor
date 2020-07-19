@@ -410,6 +410,31 @@ edit.add_command(label='Clear All', image=clear_all_icon, compound=tk.LEFT, acce
 
 
 ## find functionalities
+def find():
+	word = find_input.get()
+	text_editor.tag_remove('match', '1.0', tk.END)
+	matches = 0
+	if word:
+		start_pos = '1.0'
+		while True:
+			start_pos = text_editor.search(word, start_pos, stopindex=tk.END)
+			if not start_pos:
+				break
+			end_pos = f'{start_pos}+{len(word)}c'
+			text_editor.tag_add('match', start_pos, end_pos)
+			matches +=1
+			start_pos = end_pos
+			text_editor.tag_config('match', foreground='red', background='yellow')
+
+def replace():
+	word = find_input.get()
+	replace_text = replace_input.get()
+	content = text_editor.get(1.0, tk.END)
+	new_content = content.replace(word, replace_text)
+	text_editor.delete(1.0, tk.END)
+	text_editor.insert(1.0, new_content)
+
+
 def find_func(event=None):
 	find_dialog = tk.Toplevel()
 	find_dialog.geometry('450x250+500+200')
@@ -430,8 +455,8 @@ def find_func(event=None):
 	replace_input = ttk.Entry(find_frame, width=30)
 
 	## button 
-	find_button = ttk.Button(find_frame, text='Find')
-	replace_button = ttk.Button(find_frame, text='Replace')
+	find_button = ttk.Button(find_frame, text='Find', command=find)
+	replace_button = ttk.Button(find_frame, text='Replace', command=replace)
 
 	## label grid
 	text_find_label.grid(row=0, column=0, padx=4, pady=4)
@@ -450,15 +475,57 @@ def find_func(event=None):
 edit.add_command(label='Find', image=find_icon, compound=tk.LEFT, accelerator='Ctrl+F', command=find_func)
 
 
-## view check button commands
-view.add_checkbutton(label='Tool Bar', image=tool_bar_icon, compound=tk.LEFT)
-view.add_checkbutton(label='Status Bar', image=status_bar_icon, compound=tk.LEFT)
+
+
+## view check check button commands
+
+show_statusbar = tk.BooleanVar()
+show_statusbar.set(True)
+show_toolbar = tk.BooleanVar()
+show_toolbar.set(True)
+
+
+def hide_toolbar():
+	global show_toolbar
+	if show_toolbar:
+		tool_bar.pack_forget()
+		show_toolbar = False
+	else:
+		text_editor.pack_forget()
+		status_bar.pack_forget()
+		tool_bar.pack(side=tk.TOP, fill=tk.X)
+		text_editor.pack(fill=tk.BOTH, expand=True)
+		status_bar.pack(side=tk.BOTTOM)
+		show_toolbar=True
+
+def hide_statusbar():
+	global status_bar
+	if show_statusbar:
+		status_bar.pack_forget()
+		show_statusbar= False
+	else:
+		status_bar.pack(side=tk.BOTTOM)
+		show_statusbar = True
+
+
+
+view.add_checkbutton(label='Tool Bar', image=tool_bar_icon, compound=tk.LEFT, onvalue=True, offvalue=0, variable=show_toolbar, command=hide_toolbar)
+view.add_checkbutton(label='Status Bar', image=status_bar_icon, compound=tk.LEFT, onvalue=1, offvalue=False, variable=show_statusbar, command=hide_statusbar)
+
 
 
 ## color theme
+
+def change_theme():
+	chosen_theme = theme_choice.get()
+	color_tuple = color_dict.get(chosen_theme)
+	fg_color, bg_color = color_tuple[0], color_tuple[1]
+	text_editor.config(background=bg_color, fg=fg_color)
+
+
 count = 0
 for i in color_dict:
-	color_theme.add_radiobutton(label = i, image=color_icons[count], variable=theme_choice, compound=tk.LEFT)
+	color_theme.add_radiobutton(label = i, image=color_icons[count], variable=theme_choice, compound=tk.LEFT, command=change_theme)
 	count +=1
 
 
@@ -469,4 +536,3 @@ for i in color_dict:
 
 main_application.config(menu=main_menu)
 main_application.mainloop()
-
